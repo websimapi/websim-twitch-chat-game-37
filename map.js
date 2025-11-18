@@ -28,7 +28,7 @@ export async function regenerateMapFeature(channel, worldName, feature) {
     worldState.map.grid = tempMap.grid;
     
     // We need to pass a Map-like object to saveGameState, not the full Player instances
-    const dummyPlayers = new Map();
+    const dummyPlayers = new window.Map(); // Use window.Map to avoid conflict with the Map class from this module
     for (const id in worldState.players) {
         dummyPlayers.set(id, { getState: () => worldState.players[id] });
     }
