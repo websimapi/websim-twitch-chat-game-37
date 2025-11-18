@@ -37,6 +37,7 @@ function getSkillInfo(player) {
             return { icon: woodcuttingIcon, progress: (player.actionTotalTime - player.actionTimer) / player.actionTotalTime };
         case PLAYER_STATE.HARVESTING_LOGS:
         case PLAYER_STATE.HARVESTING_BUSHES:
+        case PLAYER_STATE.HARVESTING_FLOWERS:
             return { icon: gatheringIcon, progress: (player.actionTotalTime - player.actionTimer) / player.actionTotalTime };
         default:
             return null;
