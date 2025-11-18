@@ -150,7 +150,8 @@ export class Game {
         const clientId = this.linkedPlayers.get(player.id);
         const inventoryData = {
             logs: player.inventory.getLogCount(),
-            leaves: player.inventory.getTotalLeaves()
+            leaves: player.inventory.getTotalLeaves(),
+            flowers: player.inventory.flowers,
         };
 
         // Gather surrounding map data
