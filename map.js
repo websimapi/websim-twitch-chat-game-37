@@ -1,4 +1,5 @@
 import { TILE_TYPE } from './map-tile-types.js';
+import * as StorageManager from './storage-manager.js';
 
 export async function regenerateMapFeature(channel, worldName, feature) {
     console.log(`Regenerating ${feature} for world ${worldName}...`);
