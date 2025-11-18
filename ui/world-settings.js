@@ -4,6 +4,7 @@ import * as DOM from './dom-elements.js';
 import { findWorldsForChannel, populateWorldList } from './world-list.js';
 import { showGame } from '../ui-manager.js';
 import * as StorageManager from '../storage-manager.js';
+import { regenerateMapFeature } from '../map.js';
 
 function showDeleteConfirmation(onConfirm) {
     const overlay = document.createElement('div');
@@ -80,6 +81,14 @@ export function showWorldSettings(channel, worldName) {
                     <label>Storage System</label>
                     <p class="setting-desc">The game now uses IndexedDB for better performance and capacity.</p>
                     <div id="storage-info">Loading...</div>
+                </div>
+                <div class="settings-section">
+                    <label>World Regeneration</label>
+                    <p class="setting-desc">Regenerate features on the map. Useful for updating old worlds. This cannot be undone.</p>
+                    <div class="regen-buttons">
+                        <button class="regen-btn" id="regenerate-trees-btn">Regenerate Trees</button>
+                        <button class="regen-btn" id="regenerate-flowers-btn">Regenerate Flowers</button>
+                    </div>
                 </div>
                 <div class="settings-section">
                     <label>Visuals</label>
@@ -160,6 +169,19 @@ export function showWorldSettings(channel, worldName) {
         }
     }
     updateStorageInfo();
+
+    document.getElementById('regenerate-trees-btn').addEventListener('click', () => {
+        if (confirm(`Are you sure you want to regenerate all trees for "${currentWorldName}"?\n\nThis will remove all existing trees and spawn new ones. This action cannot be undone.`)) {
+            regenerateMapFeature(channel, currentWorldName, 'trees');
+        }
+    });
+
+    document.getElementById('regenerate-flowers-btn').addEventListener('click', () => {
+        if (confirm(`Are you sure you want to regenerate all flowers for "${currentWorldName}"?\n\nThis will remove all existing flower patches and spawn new ones. This action cannot be undone.`)) {
+            regenerateMapFeature(channel, currentWorldName, 'flowers');
+        }
+    });
+
 
     async function handleRename() {
         const newWorldName = worldNameInputEl.value.trim();

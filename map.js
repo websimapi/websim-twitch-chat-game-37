@@ -1,5 +1,44 @@
 import { TILE_TYPE } from './map-tile-types.js';
 
+export async function regenerateMapFeature(channel, worldName, feature) {
+    console.log(`Regenerating ${feature} for world ${worldName}...`);
+    const worldState = await StorageManager.loadGameState(channel, worldName);
+    if (!worldState) {
+        alert(`Could not load world data for ${worldName}.`);
+        return;
+    }
+
+    // Use a temporary Map instance to run the logic
+    const tempMap = new Map(32);
+    if (worldState.map && worldState.map.grid && worldState.map.grid.length > 0) {
+        tempMap.grid = worldState.map.grid;
+    } else {
+        // If map is empty, create a base grass grid
+        tempMap.grid = Array(tempMap.height).fill(0).map(() => Array(tempMap.width).fill(TILE_TYPE.GRASS));
+    }
+
+    if (feature === 'trees') {
+        tempMap.regenerateTrees();
+    } else if (feature === 'flowers') {
+        tempMap.regenerateFlowers();
+    }
+
+    // Save the updated map back
+    worldState.map.grid = tempMap.grid;
+    
+    // We need to pass a Map-like object to saveGameState, not the full Player instances
+    const dummyPlayers = new Map();
+    for (const id in worldState.players) {
+        dummyPlayers.set(id, { getState: () => worldState.players[id] });
+    }
+    const dummyMap = { grid: tempMap.grid, treeRespawns: worldState.map.treeRespawns || [] };
+
+    await StorageManager.saveGameState(channel, worldName, dummyPlayers, dummyMap);
+
+    alert(`${feature.charAt(0).toUpperCase() + feature.slice(1)} have been regenerated for "${worldName}"! The changes will be visible the next time you load the world.`);
+}
+
+
 export class Map {
     constructor(tileSize) {
         this.width = 256;
@@ -43,32 +82,32 @@ export class Map {
         // Generation is now handled after loading data.
     }
     
-    generateMap() {
-        console.log(`Generating map of size ${this.width}x${this.height}.`);
-        this.grid = [];
+    _generateTrees(grid) {
         const TREE_CHANCE = 1 / 16;
-        const FLOWER_CLUSTER_CHANCE = 1 / 32;
-        
         for (let j = 0; j < this.height; j++) {
-            this.grid[j] = [];
             for (let i = 0; i < this.width; i++) {
-                // 1/16 chance to spawn a tree (1)
-                this.grid[j][i] = (Math.random() < TREE_CHANCE) ? TILE_TYPE.TREE : TILE_TYPE.GRASS;
+                // Only place on grass
+                if (grid[j][i] === TILE_TYPE.GRASS && Math.random() < TREE_CHANCE) {
+                    grid[j][i] = TILE_TYPE.TREE;
+                }
             }
         }
+    }
 
-        // Generate flower clusters after trees
+    _generateFlowers(grid) {
+        const FLOWER_CLUSTER_CHANCE = 1 / 32;
         for (let j = 0; j < this.height; j++) {
             for (let i = 0; i < this.width; i++) {
-                if (this.grid[j][i] === TILE_TYPE.GRASS && Math.random() < FLOWER_CLUSTER_CHANCE) {
+                // Only place on grass
+                if (grid[j][i] === TILE_TYPE.GRASS && Math.random() < FLOWER_CLUSTER_CHANCE) {
                     const clusterSize = 2 + Math.floor(Math.random() * 2); // 2x2 or 3x3 area
                     for (let cj = -Math.floor(clusterSize / 2); cj < Math.ceil(clusterSize / 2); cj++) {
                         for (let ci = -Math.floor(clusterSize / 2); ci < Math.ceil(clusterSize / 2); ci++) {
                             const tileX = i + ci;
                             const tileY = j + cj;
-                            if (tileX >= 0 && tileX < this.width && tileY >= 0 && tileY < this.height && this.grid[tileY][tileX] === TILE_TYPE.GRASS) {
+                            if (tileX >= 0 && tileX < this.width && tileY >= 0 && tileY < this.height && grid[tileY][tileX] === TILE_TYPE.GRASS) {
                                 if (Math.random() < 0.7) { // 70% chance for a flower patch within the cluster area
-                                    this.grid[tileY][tileX] = TILE_TYPE.FLOWER_PATCH;
+                                    grid[tileY][tileX] = TILE_TYPE.FLOWER_PATCH;
                                 }
                             }
                         }
@@ -76,6 +115,47 @@ export class Map {
                 }
             }
         }
+    }
+
+    generateMap() {
+        console.log(`Generating map of size ${this.width}x${this.height}.`);
+        this.grid = [];
+        for (let j = 0; j < this.height; j++) {
+            this.grid[j] = [];
+            for (let i = 0; i < this.width; i++) {
+                this.grid[j][i] = TILE_TYPE.GRASS;
+            }
+        }
+        this._generateTrees(this.grid);
+        this._generateFlowers(this.grid);
+    }
+    
+    regenerateTrees() {
+        // Clear existing trees
+        for (let j = 0; j < this.height; j++) {
+            for (let i = 0; i < this.width; i++) {
+                if (this.grid[j][i] === TILE_TYPE.TREE) {
+                    this.grid[j][i] = TILE_TYPE.GRASS;
+                }
+            }
+        }
+        // Generate new ones
+        this._generateTrees(this.grid);
+        console.log("Trees have been regenerated.");
+    }
+    
+    regenerateFlowers() {
+        // Clear existing flowers
+        for (let j = 0; j < this.height; j++) {
+            for (let i = 0; i < this.width; i++) {
+                if (this.grid[j][i] === TILE_TYPE.FLOWER_PATCH) {
+                    this.grid[j][i] = TILE_TYPE.GRASS;
+                }
+            }
+        }
+        // Generate new ones
+        this._generateFlowers(this.grid);
+        console.log("Flowers have been regenerated.");
     }
 
     cutTree(x, y) {
